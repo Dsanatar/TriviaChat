@@ -6,7 +6,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font: 13px Helvetica, Arial; }
         form { background: #fff; padding: 3px; position: fixed; bottom: 0; width: 100%; border-color: #000; border-top-style: solid; border-top-width: 1px;}
-        form input { border-style: solid; border-width: 1px; padding: 10px; width: 85%; margin-right: .5%; }
+        input { border-style: solid; border-width: 1px; padding: 10px; width: 85%; margin-right: .5%; }
         form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; margin-left: 2%; }
         #data { list-style-type: none; margin: 0; padding: 0; }
         #data li { padding: 5px 10px; }
@@ -27,11 +27,13 @@
             name = prompt("What's your name?");
           }
           socket.emit('addUser', name);
+          $('#data').focus();
         });
 
         // listener, whenever the server emits 'updatechat', this updates the chat body
         socket.on('updateChat', function (username, data) {
           $('#conversation').append('<strong>'+username + ':</strong> ' + data + '<br>');
+          $('#data').focus();
         });
 
         // listener, whenever the server emits 'updaterooms', this updates the room the client is in
@@ -72,16 +74,19 @@
 
         </script>
 
-        <div style="float:left;width:100px;border-right:1px solid black;height:300px;padding:10px;overflow:scroll-y;">
+        <div style="float:left;width:100px;border:1px solid black;height:100px;padding:10px;overflow:scroll-y;">
           <b>ROOMS</b>
           <div id="rooms"></div>
         </div>
         <div style="float:left;width:300px;height:250px;overflow:scroll-y;padding:10px;">
           <div id="conversation" ></div>
-            <input id="data" style="width:200px; height: 20px;" />
-            <input type="button" id="datasend" value="send" 
-              style="background: rgb(130, 224, 255); border: none; height: 20px;"/>
         </div>
+        <div style="background: #fff; padding: 3px; position: fixed; bottom: 0; width: 100%; border-color: #000; border-top-style: solid; border-top-width: 1px;">
+          <input id="data" autofocus style="border-style: solid; border-width: 1px; padding: 10px; width: 85%; margin-right: .5%;" />
+          <input type="button" id="datasend" value="send" 
+            style="width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; margin-left: 2%;"/>
+        </div>
+
     </script>
 
   </body>
