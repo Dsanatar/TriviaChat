@@ -7,19 +7,41 @@ app.get('/', function(req, res){
     res.render('index.ejs');
 });
 
+var rooms = ['Team1', 'Team2'];
+var usernames = {};
+
 io.sockets.on('connection', function(socket){
-    socket.on('username', function(username){
+
+    socket.on('addUser', function(username){
         socket.username = username;
-        io.emit('is_online', '<i>' + socket.username + ' joined the chat </i>');
+        socket.room = 't1';
+        usernames[username] = username;
+        socket.join('t1');
+        socket.emit('updateChat', username, ' has joined Team1');
+        socket.emit('updateRooms', rooms, 'Team1');
     });
+
+    socket.on('sendChat', function(data){
+        io.sockets.in(socket.room).emit('updateChat', socket.username, data);
+    });
+
+    socket.on('switchRoom', function(newRoom){
+        socket.leave(socket.room);
+        socket.join(newRoom);
+        socket.broadcast.to(socket.room).emit('updateChat', socket.username, ' has left the team');
+        socket.room = newRoom;
+        socket.emit('updateChat', socket.username, ' has joined ' + newRoom);
+        socket.emit('updateRooms', rooms, newRoom);
+
+    })
 
     socket.on('disconnect', function(username){
+        delete usernames[socket.username];
+        io.sockets.emit('updateUsers', usernames);
         io.emit('is-online', '<i>' + socket.username + ' left the chat </i>');
+        socket.leave(socket.room);
     });
 
-    socket.on('chat-message', function(message){
-        io.emit('chat-message', '<strong>' + socket.username + '</strong>: ' + message);
-    });
 
 });
 

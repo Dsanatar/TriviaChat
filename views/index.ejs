@@ -8,42 +8,81 @@
         form { background: #fff; padding: 3px; position: fixed; bottom: 0; width: 100%; border-color: #000; border-top-style: solid; border-top-width: 1px;}
         form input { border-style: solid; border-width: 1px; padding: 10px; width: 85%; margin-right: .5%; }
         form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; margin-left: 2%; }
-        #messages { list-style-type: none; margin: 0; padding: 0; }
-        #messages li { padding: 5px 10px; }
-        #messages li:nth-child(odd) { background: #eee; }
+        #data { list-style-type: none; margin: 0; padding: 0; }
+        #data li { padding: 5px 10px; }
+        #data li:nth-child(odd) { background: #eee; }
     </style>
     <script src="../../socket.io/socket.io.js"></script>
     <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
   </head>
   <body>
-    <ul id="messages"></ul>
-    <form action="/" method="POST" id="chatForm">
-      <input id="txt" autocomplete="off" autofocus="on" placeholder="..." /><button>Send</button>
-    </form>
     <script>
-            var socket = io.connect('http://localhost:8080');
+        var socket = io.connect('http://localhost:8080');
 
-            // submit text message without reload/refresh the page
-            $('form').submit(function(e){
-                e.preventDefault(); // prevents page reloading
-                socket.emit('chat-message', $('#txt').val());
-                $('#txt').val('');
-                return false;
-            });
+        // on connection to server, ask for user's name with an anonymous callback
+        socket.on('connect', function(){
+          // call the server-side function 'adduser' and send one parameter (value of prompt)
+          name = prompt("What's your name?");
+          while (name.length == 0){
+            name = prompt("What's your name?");
+          }
+          socket.emit('addUser', name);
+        });
 
-            // append the chat text message
-            socket.on('chat-message', function(msg){
-                $('#messages').append($('<li>').html(msg));
-            });
+        // listener, whenever the server emits 'updatechat', this updates the chat body
+        socket.on('updateChat', function (username, data) {
+          $('#conversation').append('<strong>'+username + ':</strong> ' + data + '<br>');
+        });
 
-            // append text if someone is online
-            socket.on('is_online', function(username) {
-                $('#messages').append($('<li>').html(username));
-            });
+        // listener, whenever the server emits 'updaterooms', this updates the room the client is in
+        socket.on('updateRooms', function(rooms, current_room) {
+          $('#rooms').empty();
+          $.each(rooms, function(key, value) {
+            if(value == current_room){
+              $('#rooms').append('<div>' + value + '</div>');
+            }
+            else {
+              $('#rooms').append('<div><a href="#" onclick="switchRoom(\''+value+'\')">' + value + '</a></div>');
+            }
+          });
+        });
 
-            // ask username
-            var username = prompt('Please tell me your name');
-            socket.emit('username', username);
+        function switchRoom(room){
+          socket.emit('switchRoom', room);
+        }
+
+        // on load of page
+        $(function(){
+          // when the client clicks SEND
+          $('#datasend').click( function() {
+            var message = $('#data').val();
+            $('#data').val('');
+            // tell server to execute 'sendchat' and send along one parameter
+            socket.emit('sendChat', message);
+          });
+
+          // when the client hits ENTER on their keyboard
+          $('#data').keypress(function(e) {
+            if(e.which == 13) {
+              $(this).blur();
+              $('#datasend').focus().click();
+            }
+          });
+        });
+
+        </script>
+
+        <div style="float:left;width:100px;border-right:1px solid black;height:300px;padding:10px;overflow:scroll-y;">
+          <b>ROOMS</b>
+          <div id="rooms"></div>
+        </div>
+        <div style="float:left;width:300px;height:250px;overflow:scroll-y;padding:10px;">
+          <div id="conversation" ></div>
+            <input id="data" style="width:200px; height: 20px;" />
+            <input type="button" id="datasend" value="send" 
+              style="background: rgb(130, 224, 255); border: none; height: 20px;"/>
+        </div>
     </script>
+
   </body>
 </html>
