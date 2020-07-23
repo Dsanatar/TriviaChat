@@ -5,12 +5,6 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font: 13px Helvetica, Arial; }
-        form { background: #fff; padding: 3px; position: fixed; bottom: 0; width: 100%; border-color: #000; border-top-style: solid; border-top-width: 1px;}
-        input { border-style: solid; border-width: 1px; padding: 10px; width: 85%; margin-right: .5%; }
-        form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; margin-left: 2%; }
-        #data { list-style-type: none; margin: 0; padding: 0; }
-        #data li { padding: 5px 10px; }
-        #data li:nth-child(odd) { background: #eee; }
     </style>
     <script src="../../socket.io/socket.io.js"></script>
     <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
@@ -36,6 +30,18 @@
           $('#data').focus();
         });
 
+        socket.on('updateScore', function (data) {
+          $('#test').remove();
+          $('#t1').append('<p id="test">' + data + '</p>');
+        });
+
+        socket.on('updateAns', function(data){
+          $('p').remove('#t1Ans, #t2Ans');
+          $('#t1Input').append('<p id="t1Ans">' + data['Team1'] + '</p>');
+          $('#t2Input').append('<p id="t2Ans">' + data['Team2'] + '</p>');
+        })
+
+
         // listener, whenever the server emits 'updaterooms', this updates the room the client is in
         socket.on('updateRooms', function(rooms, current_room) {
           $('#rooms').empty();
@@ -59,8 +65,19 @@
           $('#datasend').click( function() {
             var message = $('#data').val();
             $('#data').val('');
+
+            // submit answer to other team
+            if(message.substring(0,2) == "/a"){
+              var ans = message.substring(3);
+              console.log(ans);
+              socket.emit('submitAns', ans);
+              $('#data').focus();
+            }
+            
             // tell server to execute 'sendchat' and send along one parameter
-            socket.emit('sendChat', message);
+            else{
+              socket.emit('sendChat', message);
+            }
           });
 
           // when the client hits ENTER on their keyboard
@@ -70,7 +87,23 @@
               $('#datasend').focus().click();
             }
           });
+
+          $('#button').click(function () {
+            if( $('#t1').is(':empty') ){
+              $('#t1').attr('score', "1");
+              var score = $('#t1').attr('score')
+              socket.emit('sendScoreTo2', Number(score));
+            }
+            else{
+              var score = $('#t1').attr('score');
+              score = Number(score) + 1;
+              $('#t1').attr('score', parseInt(score));
+              socket.emit('sendScoreTo2', Number(score));
+            }
+            
+          });
         });
+
 
         </script>
 
@@ -84,7 +117,22 @@
         <div style="background: #fff; padding: 3px; position: fixed; bottom: 0; width: 100%; border-color: #000; border-top-style: solid; border-top-width: 1px;">
           <input id="data" autofocus style="border-style: solid; border-width: 1px; padding: 10px; width: 85%; margin-right: .5%;" />
           <input type="button" id="datasend" value="send" 
-            style="width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; margin-left: 2%;"/>
+            style="width: 9%; background: rgb(90, 181, 211); border: none; padding: 10px; margin-left: 2%;"/>
+        </div>
+
+        <div> 
+          <h3>Team 1 Score: </h1>
+          <div id="t1"></div>
+          <button id="button" ></button>
+          <h3>Team 2 Score: </h3>
+        </div>
+
+        <div id="t1Input">
+          <p>Team 1 Input:</p>
+        </div>
+
+        <div id="t2Input">
+            <p>Team 2 Input:</p>
         </div>
 
     </script>
