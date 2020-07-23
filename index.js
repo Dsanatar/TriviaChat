@@ -7,19 +7,77 @@ app.get('/', function(req, res){
     res.render('index.ejs');
 });
 
+var rooms = ['Team1', 'Team2'];
+var usernames = {};
+
+var ansList = {};
+
 io.sockets.on('connection', function(socket){
-    socket.on('username', function(username){
+
+    socket.on('addUser', function(username){
         socket.username = username;
-        io.emit('is_online', '<i>' + socket.username + ' joined the chat </i>');
+        socket.room = 'Team1';
+        usernames[username] = username;
+        socket.join('Team1');
+        socket.emit('updateChat', username, ' has joined Team1');
+        socket.broadcast.to('Team1').emit('updateChat', username, ' has joined Team1');
+        socket.emit('updateRooms', rooms, 'Team1');
     });
+
+    socket.on('sendChat', function(data){
+        io.sockets.in(socket.room).emit('updateChat', socket.username, data);
+    });
+
+    socket.on('sendScoreTo2', function(data){
+        socket.to('Team1').emit('updateScore', data);
+        io.sockets.in(socket.room).emit('updateScore', data);
+    });
+
+    socket.on('sendScoreTo1', function(data){
+        socket.to('Team1').emit('updateScore', data);
+        io.sockets.in(socket.room).emit('updateScore', data);
+    });
+
+    socket.on('submitAns', function(data){
+        ansList[socket.room] = data;
+        console.log(ansList)
+        if(Object.keys(ansList).length == 2){
+            switch (socket.room) {
+                case 'Team1':
+                    socket.to('Team2').emit('updateAns', ansList);
+                    io.sockets.in(socket.room).emit('updateAns', ansList);
+                    ansList = {};
+                    break;
+                case 'Team2':
+                    socket.to('Team1').emit('updateAns', ansList);
+                    io.sockets.in(socket.room).emit('updateAns', ansList);
+                    ansList = {};
+                    break;
+            
+                default:
+                    break;
+            }
+        }
+    })
+
+
+    socket.on('switchRoom', function(newRoom){
+        socket.leave(socket.room);
+        socket.join(newRoom);
+        socket.broadcast.to(socket.room).emit('updateChat', socket.username, ' has left the team');
+        socket.room = newRoom;
+        socket.emit('updateChat', socket.username, ' has joined ' + newRoom);
+        socket.emit('updateRooms', rooms, newRoom);
+
+    })
 
     socket.on('disconnect', function(username){
-        io.emit('is-online', '<i>' + socket.username + ' left the chat </i>');
+        delete usernames[socket.username];
+        io.sockets.emit('updateUsers', usernames);
+        socket.broadcast.emit('updateChat', socket.username, ' has disconnected');
+        socket.leave(socket.room);
     });
 
-    socket.on('chat-message', function(message){
-        io.emit('chat-message', '<strong>' + socket.username + '</strong>: ' + message);
-    });
 
 });
 
